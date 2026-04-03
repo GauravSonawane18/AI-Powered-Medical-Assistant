@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+*.err.log
+*.out.log
+
+# Uploads (user-generated files)
+app/uploads/
+
+# Mobile
+mobile/venv/
+mobile/node_modules/
+mobile/.expo/
+
+# OS
+.DS_Store
+Thumbs.db
+.env
+.env
