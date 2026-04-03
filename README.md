@@ -1,141 +1,122 @@
-# Medibot
+# AI-Powered Medical Assistant
 
-Medibot is an AI-assisted medical support platform built with a FastAPI backend and an Expo React Native mobile app. It helps patients describe symptoms, receive safe first-pass guidance, and lets doctors review flagged conversations, add notes, and update medical records in real time.
+AI-Powered Medical Assistant is a FastAPI + Expo mobile application for patient support, doctor review, and AI-assisted symptom guidance. Patients can register, chat with the assistant, upload files, and receive doctor notes. Doctors can review flagged chats, search patients, add notes, and update medical history in real time.
 
-## Features
+## Core Features
 
-- JWT-based authentication with patient, doctor, and admin roles
-- Patient onboarding with profile details like age, gender, blood group, allergies, phone number, and weight
-- AI chat responses generated from an OpenAI-compatible model
-- Prompt context enriched with recent chats, medical history, and doctor notes
-- Keyword-based risk scoring with `low`, `medium`, `high`, and `critical` severity levels
-- Automatic flagging of urgent or risky messages for doctor review
-- Doctor workflow for reviewing flagged chats, writing notes, and sending messages back to patients
-- Real-time updates over WebSockets for doctor notes and patient replies
-- Mobile-first interface built with Expo and React Native
+- JWT-based authentication for `patient`, `doctor`, and `admin`
+- AI-assisted medical chat using an OpenAI-compatible API
+- Risk scoring with `low`, `medium`, `high`, and `critical` severity
+- Doctor dashboard for flagged conversations and patient review
+- Medical history management
+- Password reset by OTP email
+- File upload support
+- WebSocket-based real-time doctor and patient updates
+- Expo React Native mobile app
 
 ## Tech Stack
 
-- Backend: FastAPI, SQLAlchemy, Pydantic, PostgreSQL or SQLite
-- Auth: JWT with `python-jose` and password hashing with `passlib`
-- AI: OpenAI-compatible chat completions API
-- Mobile: Expo, React Native, AsyncStorage
-- Realtime: FastAPI WebSocket endpoint
+- Backend: FastAPI, SQLAlchemy, Pydantic Settings
+- Mobile: Expo, React Native
+- Database: PostgreSQL
+- Auth: JWT with `python-jose`
+- AI client: OpenAI Python SDK
 
-## Repository Structure
+## Project Structure
 
 ```text
-Medibot/
+AI-Powered Medical Assistant/
 |-- app/
-|   |-- config/        # App settings and environment parsing
-|   |-- database/      # SQLAlchemy engine and base setup
-|   |-- models/        # ORM models
-|   |-- routes/        # REST and WebSocket routes
-|   |-- schemas/       # Request/response models
-|   |-- services/      # Auth, chat, doctor, patient, and risk logic
-|   |-- utils/         # Security, dependencies, logging
-|   `-- main.py        # FastAPI entrypoint
+|   |-- config/
+|   |-- database/
+|   |-- models/
+|   |-- routes/
+|   |-- schemas/
+|   |-- services/
+|   |-- utils/
+|   `-- main.py
 |-- mobile/
 |   |-- src/
-|   |   |-- screens/   # Auth, patient, and doctor app screens
-|   |   |-- components/# Shared mobile UI pieces
-|   |   `-- api.js     # Mobile API client
 |   |-- App.js
 |   `-- package.json
 |-- data/
-|   `-- Medical_book.pdf
 |-- requirements.txt
-|-- .env.example
 `-- README.md
 ```
 
-## How It Works
+## Database Design
 
-1. A patient registers, logs in, and submits a symptom or health-related message.
-2. The backend scores the message for risk using keyword-based triage rules.
-3. The AI response is generated with patient context, recent chats, medical history, and doctor notes.
-4. High-risk chats are flagged for a doctor, who can review the conversation, add notes, and message the patient.
-5. Doctor notes and patient replies are pushed in real time through the WebSocket channel.
+This project is currently aligned to a PostgreSQL schema where:
 
-## API Overview
+- `patients.patient_code` is the effective primary identifier used by the app
+- patient-linked tables such as `chats`, `doctor_notes`, `medical_history`, and `chat_summaries` use `patient_code`
+- `patients.user_id` links each patient row to the authenticated user row
 
-### Public
+If you already have project data in PostgreSQL, keep using that database. Do not switch to a fresh SQLite database unless you intentionally want a separate local dataset.
 
-- `POST /register` - create a new account
-- `POST /login` - authenticate and receive a JWT
-- `GET /health` - basic health check
+## Prerequisites
 
-### Patient
+- Python 3.12+
+- Node.js 18+
+- npm
+- PostgreSQL
 
-- `GET /me` - fetch patient profile
-- `POST /chat` - send a message to the AI assistant
-- `GET /chat/history` - retrieve past conversations
-- `GET /medical-history` - retrieve patient medical history
-- `POST /notes/{note_id}/reply` - reply to a doctor's note
+## Backend Setup
 
-### Doctor/Admin
-
-- `GET /patients` - list patients
-- `GET /patients/{patient_id}` - fetch detailed patient data
-- `GET /doctor/notifications` - unread flagged-chat count
-- `GET /doctor/flagged-chats` - list high-priority chats
-- `POST /doctor/chats/{chat_id}/review` - mark a flagged chat as reviewed
-- `POST /doctor/notes` - add doctor notes or a message to a patient
-- `POST /doctor/medical-history` - create a medical history entry
-
-### Realtime
-
-- `WS /ws?token=<jwt>` - authenticated WebSocket for doctor and patient updates
-
-## Local Setup
-
-### 1. Backend
-
-Create and activate a virtual environment:
+Create and activate a virtual environment in Bash:
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate
+source .venv/Scripts/activate
 ```
 
-Install dependencies:
+Install backend dependencies:
 
 ```bash
 pip install -r requirements.txt
 pip install openai
 ```
 
-Create a `.env` file in the project root. A simple local setup can use SQLite:
+Create a `.env` file in the project root:
 
 ```env
-APP_NAME=AI Medical Chatbot API
+APP_NAME=AI-Powered Medical Assistant
 APP_VERSION=1.0.0
-DEBUG=true
-DATABASE_URL=sqlite:///./medibot.db
+DEBUG=false
+DATABASE_URL=postgresql://postgres:your_password@localhost:5432/medibotdb
 JWT_SECRET_KEY=replace-with-a-long-random-secret
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=10080
-OPENAI_API_KEY=your_openai_api_key
+OPENAI_API_KEY=your_api_key
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_BASE_URL=
 CORS_ORIGINS=["*"]
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
+EMAIL_FROM_NAME=MedAssist
+APP_BASE_URL=http://localhost:8000
 ```
 
-If you prefer PostgreSQL, use a connection string like:
+Notes:
 
-```env
-DATABASE_URL=postgresql://postgres:your_password@localhost:5432/medical_chatbot
-```
+- `DATABASE_URL` can be written as `postgresql://...`; the app normalizes it to `postgresql+psycopg://...`
+- `SMTP_*` values are required if you want password reset emails to work
+- `OPENAI_BASE_URL` can be left blank for OpenAI, or set to a compatible provider endpoint such as Groq
 
-Start the API server:
+Start the backend:
 
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --reload-dir app --host 0.0.0.0 --port 8000
 ```
 
-Docs will be available at `http://127.0.0.1:8000/docs`.
+Backend URLs:
 
-### 2. Mobile App
+- API docs: `http://127.0.0.1:8000/docs`
+- Health check: `http://127.0.0.1:8000/health`
+
+## Mobile Setup
 
 Install mobile dependencies:
 
@@ -144,49 +125,69 @@ cd mobile
 npm install
 ```
 
-Update the backend URL in `mobile/src/api.js` before launching the app:
+Update the API base URL in `mobile/src/api.js`.
 
-- Physical device: use your computer's LAN IP, for example `http://192.168.1.10:8000`
-- Android emulator: use `http://10.0.2.2:8000`
+Use one of these values:
 
-Start Expo:
+- Physical device: `http://YOUR_PC_LAN_IP:8000`
+- Android emulator: `http://10.0.2.2:8000`
+
+Start the Expo app:
 
 ```bash
 npx expo start
 ```
 
-Useful scripts:
+Useful commands:
 
 ```bash
 npm run android
-npm run ios
-npm run build:apk
+npx expo start --tunnel
 ```
 
-## Risk Detection
+Use `--tunnel` if your phone and laptop are not on the same Wi-Fi network.
 
-The app uses lightweight keyword matching to classify risk before the doctor workflow kicks in.
+## Main API Endpoints
 
-- `critical`: chest pain, difficulty breathing, stroke, seizure, self-harm, severe bleeding, and similar urgent phrases
-- `high`: confusion, severe headache, irregular heartbeat, persistent vomiting, and related phrases
-- `medium`: fever, rash, dizziness, dehydration, vomiting, diarrhea, and related phrases
+Public:
 
-Flagged chats are stored and surfaced to doctors for review.
+- `POST /register`
+- `POST /login`
+- `GET /health`
+- `POST /password-reset/request`
+- `POST /password-reset/confirm`
 
-## Notes
+Patient:
 
-- The assistant is designed for guidance and escalation, not definitive diagnosis.
-- Database tables are created automatically on app startup through SQLAlchemy metadata.
-- The mobile client currently uses a hardcoded API base URL in `mobile/src/api.js`, so it should be updated for each local network setup.
-- The backend uses the OpenAI Python SDK for chat completion requests.
+- `GET /me`
+- `POST /chat`
+- `GET /chat/history`
+- `GET /chat/search?q=...`
+- `GET /medical-history`
+- `POST /notes/{note_id}/reply`
+- `POST /push-token`
+- `POST /upload`
 
-## Future Improvements
+Doctor/Admin:
 
-- Replace keyword triage with a more robust clinical risk pipeline
-- Move the mobile API base URL to environment-driven Expo config
-- Add automated tests for backend services and mobile flows
-- Add deployment guides for cloud-hosted API and mobile builds
+- `GET /patients`
+- `GET /patients/{patient_id}`
+- `GET /doctor/notifications`
+- `GET /doctor/flagged-chats`
+- `POST /doctor/chats/{chat_id}/review`
+- `POST /doctor/notes`
+- `POST /doctor/medical-history`
+- `POST /doctor/push-token`
+- `GET /doctor/audit-log`
 
-## License
+Realtime:
 
-Add a license here before publishing publicly.
+- `WS /ws?token=<jwt>`
+
+## Important Notes
+
+- The mobile client uses a hardcoded API base URL in `mobile/src/api.js`
+- Uploaded files are stored under `app/uploads/`
+- Database tables are created on startup and lightweight non-destructive migrations run automatically
+- Password reset depends on working SMTP credentials
+- The assistant is for guidance and escalation, not final medical diagnosis
