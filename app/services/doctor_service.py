@@ -12,7 +12,7 @@ from app.schemas.patient import MedicalHistoryCreate
 from app.services.audit_service import log_action
 
 
-def _get_patient_or_404(db: Session, patient_id: int) -> Patient:
+def _get_patient_or_404(db: Session, patient_id: str) -> Patient:
     statement = (
         select(Patient)
         .options(
@@ -21,7 +21,7 @@ def _get_patient_or_404(db: Session, patient_id: int) -> Patient:
             joinedload(Patient.medical_histories),
             joinedload(Patient.doctor_notes),
         )
-        .where(Patient.id == patient_id)
+        .where(Patient.patient_code == patient_id)
     )
     patient = db.execute(statement).unique().scalar_one_or_none()
     if patient is None:
@@ -34,14 +34,14 @@ def list_patients(db: Session) -> list[Patient]:
     return list(db.scalars(statement).unique().all())
 
 
-def get_patient_details(db: Session, patient_id: int) -> Patient:
+def get_patient_details(db: Session, patient_id: str) -> Patient:
     return _get_patient_or_404(db, patient_id)
 
 
 def list_flagged_conversations(db: Session, limit: int = 100) -> list[FlaggedConversationResponse]:
     statement = (
         select(Chat, Patient, User)
-        .join(Patient, Chat.patient_id == Patient.id)
+        .join(Patient, Chat.patient_code == Patient.patient_code)
         .join(User, Patient.user_id == User.id)
         .where(Chat.is_flagged.is_(True))
         .order_by(Chat.created_at.desc())
@@ -73,7 +73,7 @@ def add_doctor_note(db: Session, current_doctor: User, payload: DoctorNoteCreate
 
     note = DoctorNote(
         doctor_id=current_doctor.id,
-        patient_id=chat.patient_id,
+        patient_code=chat.patient_code,
         chat_id=chat.id,
         notes=payload.notes,
         diagnosis=payload.diagnosis,
@@ -82,7 +82,7 @@ def add_doctor_note(db: Session, current_doctor: User, payload: DoctorNoteCreate
     )
     db.add(note)
     log_action(db, "add_doctor_note", user_id=current_doctor.id, resource="doctor_note",
-               resource_id=None, detail=f"chat_id={chat.id} patient_id={chat.patient_id}")
+               resource_id=None, detail=f"chat_id={chat.id} patient_code={chat.patient_code}")
     db.commit()
     db.refresh(note)
     return note
@@ -101,9 +101,9 @@ def mark_chat_reviewed(db: Session, chat_id: int) -> Chat:
     return chat
 
 
-def reply_to_note(db: Session, note_id: int, patient_id: int, reply: str) -> DoctorNote:
+def reply_to_note(db: Session, note_id: int, patient_id: str, reply: str) -> DoctorNote:
     from datetime import datetime, timezone
-    note = db.scalar(select(DoctorNote).where(DoctorNote.id == note_id, DoctorNote.patient_id == patient_id))
+    note = db.scalar(select(DoctorNote).where(DoctorNote.id == note_id, DoctorNote.patient_code == patient_id))
     if note is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found.")
     note.patient_reply = reply
@@ -117,7 +117,7 @@ def add_medical_history_entry(db: Session, payload: MedicalHistoryCreate) -> Med
     _get_patient_or_404(db, payload.patient_id)
 
     entry = MedicalHistory(
-        patient_id=payload.patient_id,
+        patient_code=payload.patient_id,
         condition=payload.condition,
         notes=payload.notes,
     )

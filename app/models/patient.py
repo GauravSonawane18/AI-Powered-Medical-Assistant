@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.session import Base
@@ -11,9 +11,9 @@ from app.database.session import Base
 class Patient(Base):
     __tablename__ = "patients"
 
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    legacy_id: Mapped[int | None] = mapped_column("id", Integer, unique=True, nullable=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
-    patient_code: Mapped[str | None] = mapped_column(String(20), unique=True, nullable=True, index=True)
+    patient_code: Mapped[str] = mapped_column(String(20), primary_key=True)
     age: Mapped[int | None] = mapped_column(nullable=True)
     gender: Mapped[str | None] = mapped_column(String(50), nullable=True)
     phone_number: Mapped[str | None] = mapped_column(String(30), nullable=True)
@@ -43,6 +43,10 @@ class Patient(Base):
         cascade="all, delete-orphan",
         order_by="desc(DoctorNote.created_at)",
     )
+
+    @property
+    def id(self) -> str:
+        return self.patient_code
 
     @property
     def medical_history(self) -> list["MedicalHistory"]:

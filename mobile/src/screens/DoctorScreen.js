@@ -399,6 +399,7 @@ export default function DoctorScreen({ user, onLogout }) {
   const [patients, setPatients] = useState([]);
   const [flaggedChats, setFlaggedChats] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientSearch, setPatientSearch] = useState('');
   const [alert, setAlert] = useState({ message: '', type: 'error' });
   const [refreshing, setRefreshing] = useState(false);
   const [loadingPatient, setLoadingPatient] = useState(false);
@@ -473,6 +474,13 @@ export default function DoctorScreen({ user, onLogout }) {
   const priorityPatients = patients.filter((p) =>
     flaggedChats.some((c) => c.patient_id === p.id && !c.is_reviewed)
   );
+  const patientSearchTerm = patientSearch.trim().toLowerCase();
+  const filteredPatients = patients.filter((p) => {
+    if (!patientSearchTerm) return true;
+    const name = (p.user?.name || '').toLowerCase();
+    const code = (p.patient_code || '').toLowerCase();
+    return name.includes(patientSearchTerm) || code.includes(patientSearchTerm);
+  });
 
   return (
     <View style={[shared.screen, { backgroundColor: colors.bg }]}>
@@ -590,8 +598,20 @@ export default function DoctorScreen({ user, onLogout }) {
               <View style={styles.tabHeader}>
                 <Text style={[styles.sectionHeading, { color: colors.text, marginBottom: 0 }]}>All Patients</Text>
                 <View style={[styles.countPill, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.countPillText}>{patients.length}</Text>
+                  <Text style={styles.countPillText}>{filteredPatients.length}</Text>
                 </View>
+              </View>
+              <View style={styles.searchWrap}>
+                <TextInput
+                  style={[styles.searchInput, { color: colors.text, backgroundColor: colors.card, borderColor: colors.border }]}
+                  value={patientSearch}
+                  onChangeText={setPatientSearch}
+                  placeholder="Search by patient name or code"
+                  placeholderTextColor={colors.muted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  clearButtonMode="while-editing"
+                />
               </View>
               {patients.length === 0 && (
                 <View style={styles.emptyTab}>
@@ -600,7 +620,13 @@ export default function DoctorScreen({ user, onLogout }) {
                   <Text style={[shared.muted, { textAlign: 'center' }]}>Patients will appear here once they register.</Text>
                 </View>
               )}
-              {patients.map((p) => {
+              {patients.length > 0 && filteredPatients.length === 0 && (
+                <View style={styles.searchEmptyBox}>
+                  <Text style={[styles.emptyTabTitle, { color: colors.text, marginBottom: 6 }]}>No patients found</Text>
+                  <Text style={[shared.muted, { textAlign: 'center' }]}>Try a different patient name or patient code.</Text>
+                </View>
+              )}
+              {filteredPatients.map((p) => {
                 const hasUnreviewed = flaggedChats.some((c) => c.patient_id === p.id && !c.is_reviewed);
                 const hasCritical = flaggedChats.some((c) => c.patient_id === p.id && c.severity_level === 'critical' && !c.is_reviewed);
                 const initials = (p.user?.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -804,8 +830,17 @@ function makeStyles(colors) {
 
   // Patient card
   tabHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
+  searchWrap: { marginBottom: 14 },
+  searchInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+  },
   countPill: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
   countPillText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+  searchEmptyBox: { alignItems: 'center', paddingVertical: 28, paddingHorizontal: 16 },
   patientCard: {
     flexDirection: 'row',
     alignItems: 'center',

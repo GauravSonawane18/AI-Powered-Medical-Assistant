@@ -36,7 +36,7 @@ def get_patients(
 
 @router.get("/patients/{patient_id}", response_model=PatientDetailResponse)
 def get_patient(
-    patient_id: int,
+    patient_id: str,
     _: User = Depends(require_roles(UserRole.doctor, UserRole.admin)),
     db: Session = Depends(get_db),
 ) -> PatientDetailResponse:

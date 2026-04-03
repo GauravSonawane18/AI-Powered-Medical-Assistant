@@ -22,7 +22,7 @@ class DoctorNoteResponse(BaseModel):
 
     id: int
     doctor_id: int
-    patient_id: int
+    patient_id: str
     chat_id: int | None
     notes: str
     diagnosis: str | None
@@ -35,7 +35,7 @@ class DoctorNoteResponse(BaseModel):
 
 class FlaggedConversationResponse(BaseModel):
     id: int
-    patient_id: int
+    patient_id: str
     patient_name: str
     patient_code: str | None = None
     message: str

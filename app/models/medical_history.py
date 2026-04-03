@@ -12,7 +12,7 @@ class MedicalHistory(Base):
     __tablename__ = "medical_history"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    patient_id: Mapped[int] = mapped_column(ForeignKey("patients.id", ondelete="CASCADE"), nullable=False)
+    patient_code: Mapped[str] = mapped_column(ForeignKey("patients.patient_code", ondelete="CASCADE"), nullable=False)
     condition: Mapped[str] = mapped_column(String(150), nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -22,3 +22,7 @@ class MedicalHistory(Base):
     )
 
     patient: Mapped["Patient"] = relationship(back_populates="medical_histories")
+
+    @property
+    def patient_id(self) -> str:
+        return self.patient_code

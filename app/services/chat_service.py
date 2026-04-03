@@ -115,7 +115,7 @@ def process_patient_chat(db: Session, patient: Patient, payload: ChatRequest) ->
     previous_chats = list(
         db.scalars(
             select(Chat)
-            .where(Chat.patient_id == patient.id)
+            .where(Chat.patient_code == patient.patient_code)
             .order_by(Chat.created_at.desc())
             .limit(CHAT_CONTEXT_LIMIT)
         ).all()
@@ -123,7 +123,7 @@ def process_patient_chat(db: Session, patient: Patient, payload: ChatRequest) ->
     medical_history = list(
         db.scalars(
             select(MedicalHistory)
-            .where(MedicalHistory.patient_id == patient.id)
+            .where(MedicalHistory.patient_code == patient.patient_code)
             .order_by(MedicalHistory.created_at.desc())
             .limit(MEDICAL_CONTEXT_LIMIT)
         ).all()
@@ -131,14 +131,14 @@ def process_patient_chat(db: Session, patient: Patient, payload: ChatRequest) ->
     doctor_notes = list(
         db.scalars(
             select(DoctorNote)
-            .where(DoctorNote.patient_id == patient.id)
+            .where(DoctorNote.patient_code == patient.patient_code)
             .order_by(DoctorNote.created_at.desc())
             .limit(DOCTOR_NOTE_LIMIT)
         ).all()
     )
 
     # Use AI-generated summary when available, replacing raw recent chats
-    chat_summary = get_latest_summary(db, patient.id)
+    chat_summary = get_latest_summary(db, patient.patient_code)
     if chat_summary:
         previous_chats_override = []  # summary replaces individual chats in prompt
     else:
@@ -149,7 +149,7 @@ def process_patient_chat(db: Session, patient: Patient, payload: ChatRequest) ->
     safe_response = _append_safety_footer(model_response, risk)
 
     chat = Chat(
-        patient_id=patient.id,
+        patient_code=patient.patient_code,
         symptoms=payload.symptoms,
         message=payload.message,
         response=safe_response,
@@ -167,7 +167,7 @@ def process_patient_chat(db: Session, patient: Patient, payload: ChatRequest) ->
         if payload.symptoms:
             notes += f"\nSymptoms: {payload.symptoms}"
         db.add(MedicalHistory(
-            patient_id=patient.id,
+            patient_code=patient.patient_code,
             condition=condition,
             notes=notes,
         ))

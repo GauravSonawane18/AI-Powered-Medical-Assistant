@@ -31,25 +31,25 @@ def get_patient_by_user_id(db: Session, user_id: int) -> Patient | None:
     return db.scalar(select(Patient).where(Patient.user_id == user_id))
 
 
-def get_patient_summary(db: Session, patient_id: int) -> Patient:
+def get_patient_summary(db: Session, patient_id: str) -> Patient:
     patient = db.scalar(
         select(Patient)
         .options(joinedload(Patient.user))
-        .where(Patient.id == patient_id)
+        .where(Patient.patient_code == patient_id)
     )
     if patient is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
     return patient
 
 
-def search_chat_history(db: Session, patient_id: int, query: str, limit: int = 50) -> list[Chat]:
+def search_chat_history(db: Session, patient_id: str, query: str, limit: int = 50) -> list[Chat]:
     from sqlalchemy import or_
     term = f"%{query}%"
     statement = (
         select(Chat)
         .options(joinedload(Chat.doctor_notes))
         .where(
-            Chat.patient_id == patient_id,
+            Chat.patient_code == patient_id,
             or_(Chat.message.ilike(term), Chat.response.ilike(term), Chat.symptoms.ilike(term)),
         )
         .order_by(Chat.created_at.desc())
@@ -58,21 +58,21 @@ def search_chat_history(db: Session, patient_id: int, query: str, limit: int = 5
     return list(db.scalars(statement).unique().all())
 
 
-def list_chat_history(db: Session, patient_id: int, limit: int = 50) -> list[Chat]:
+def list_chat_history(db: Session, patient_id: str, limit: int = 50) -> list[Chat]:
     statement = (
         select(Chat)
         .options(joinedload(Chat.doctor_notes))
-        .where(Chat.patient_id == patient_id)
+        .where(Chat.patient_code == patient_id)
         .order_by(Chat.created_at.desc())
         .limit(limit)
     )
     return list(db.scalars(statement).unique().all())
 
 
-def get_medical_history_for_patient(db: Session, patient_id: int, limit: int = 50) -> list[MedicalHistory]:
+def get_medical_history_for_patient(db: Session, patient_id: str, limit: int = 50) -> list[MedicalHistory]:
     statement = (
         select(MedicalHistory)
-        .where(MedicalHistory.patient_id == patient_id)
+        .where(MedicalHistory.patient_code == patient_id)
         .order_by(MedicalHistory.created_at.desc())
         .limit(limit)
     )
