@@ -36,17 +36,25 @@ function AppInner() {
   const [serverStatus, setServerStatus] = useState('checking');
 
   useEffect(() => {
-    loadSession().then(({ token: t, user: u }) => {
-      if (t && u) { setToken(t); setUser(u); }
-      setLoading(false);
-    });
-  }, []);
-
-  useEffect(() => {
     let cancelled = false;
-    api.healthCheck()
-      .then(() => { if (!cancelled) setServerStatus('ok'); })
-      .catch(() => { if (!cancelled) setServerStatus('unreachable'); });
+
+    async function init() {
+      // Run session load and health check in parallel
+      const [sessionResult] = await Promise.all([
+        loadSession(),
+        api.healthCheck()
+          .then(() => { if (!cancelled) setServerStatus('ok'); })
+          .catch(() => { if (!cancelled) setServerStatus('unreachable'); }),
+      ]);
+
+      if (!cancelled) {
+        const { token: t, user: u } = sessionResult;
+        if (t && u) { setToken(t); setUser(u); }
+        setLoading(false);
+      }
+    }
+
+    init();
     return () => { cancelled = true; };
   }, []);
 
@@ -57,6 +65,13 @@ function AppInner() {
   }
 
   useEffect(() => { setUnauthorizedHandler(handleLogout); }, []);
+
+  function retryHealthCheck() {
+    setServerStatus('checking');
+    api.healthCheck()
+      .then(() => setServerStatus('ok'))
+      .catch(() => setServerStatus('unreachable'));
+  }
 
   if (loading || serverStatus === 'checking') {
     return (
@@ -77,7 +92,7 @@ function AppInner() {
           Make sure FastAPI is running and the IP in src/api.js is correct.
         </Text>
         <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]}
-          onPress={() => setServerStatus('checking')}>
+          onPress={retryHealthCheck}>
           <Text style={styles.retryText}>Retry</Text>
         </TouchableOpacity>
       </View>

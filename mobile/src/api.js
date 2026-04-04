@@ -2,7 +2,7 @@ import { getToken } from './storage';
 
 // Physical device (Android + iOS): use your PC's LAN IP
 // Android emulator only: use 10.0.2.2
-export const API_BASE_URL = 'http://10.187.101.163:8000';
+export const API_BASE_URL = 'http://10.41.187.102:8000';
 
 // App.js registers this so any 401 auto-triggers logout
 let _onUnauthorized = null;
@@ -16,15 +16,22 @@ async function request(path, options = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
 
+  const timeoutMs = options.timeout || 10000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
   let response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       method: options.method || 'GET',
       headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
     });
   } catch {
     throw new Error('Cannot reach the server. Check that FastAPI is running and the IP is correct.');
+  } finally {
+    clearTimeout(timer);
   }
 
   if (response.status === 401 && !options.skipAuth) {
@@ -58,7 +65,7 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  healthCheck: () => request('/health', { skipAuth: true }),
+  healthCheck: () => request('/health', { skipAuth: true, timeout: 5000 }),
   login: (body) => request('/login', { method: 'POST', body, skipAuth: true }),
   register: (body) => request('/register', { method: 'POST', body, skipAuth: true }),
   requestPasswordReset: (body) => request('/password-reset/request', { method: 'POST', body, skipAuth: true }),
